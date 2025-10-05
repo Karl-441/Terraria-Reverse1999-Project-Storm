@@ -1,0 +1,162 @@
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Terraria;
+using Terraria.Audio;
+using Terraria.DataStructures;
+using Terraria.GameContent;
+using Terraria.GameContent.Bestiary;
+using Terraria.GameContent.ItemDropRules;
+using Terraria.GameContent.Personalities;
+using Terraria.GameContent.UI;
+using Terraria.ID;
+using Terraria.Localization;
+using Terraria.ModLoader;
+using Terraria.ModLoader.IO;
+using Terraria.Utilities;
+using Terra1999.Events;
+
+namespace Terra1999.NPCs
+{
+    [AutoloadHead]
+    public class VertinNPC : ModNPC
+    {
+        public override void SetStaticDefaults()
+        {
+            Main.npcFrameCount[NPC.type] = 25;
+            NPCID.Sets.ExtraFramesCount[NPC.type] = 9;
+            NPCID.Sets.AttackFrameCount[NPC.type] = 4;
+            NPCID.Sets.DangerDetectRange[NPC.type] = 700;
+            NPCID.Sets.AttackType[NPC.type] = 0;
+            NPCID.Sets.AttackTime[NPC.type] = 90;
+            NPCID.Sets.AttackAverageChance[NPC.type] = 30;
+            NPCID.Sets.HatOffsetY[NPC.type] = 4;
+        }
+
+        public override void SetDefaults()
+        {
+            NPC.townNPC = true;
+            NPC.friendly = true;
+            NPC.width = 18;
+            NPC.height = 40;
+            NPC.aiStyle = 7;
+            NPC.damage = 10;
+            NPC.defense = 15;
+            NPC.lifeMax = 250;
+            NPC.HitSound = SoundID.NPCHit1;
+            NPC.DeathSound = SoundID.NPCDeath1;
+            NPC.knockBackResist = 0.5f;
+            AnimationType = NPCID.Guide;
+        }
+
+        // 修复：使用正确的 TownNPCSpawnInfo 类型
+public override bool CanTownNPCSpawn(int numTownNPCs)
+{
+    if (Main.netMode != NetmodeID.MultiplayerClient)
+    {
+        // 单人模式或服务器：检查主玩家状态
+        // 使用 Main.LocalPlayer 获取当前玩家
+        Player player = Main.LocalPlayer;
+        if (player.active)
+        {
+            Terra1999Player modPlayer = player.GetModPlayer<Terra1999Player>();
+            return modPlayer.modUnlocked;
+        }
+        return false;
+    }
+    else
+    {
+        // 多人模式客户端：使用默认行为
+        return base.CanTownNPCSpawn(numTownNPCs);
+    }
+}
+
+        // 修复：使用 TownNPCName 属性而不是 GetSpawnName 方法
+		public override List<string> SetNPCNameList() {
+			return new List<string>() {
+				"维尔汀",
+			};
+		}
+
+        public override void SetChatButtons(ref string button, ref string button2)
+        {
+            button = "商店";
+            button2 = ""; // 确保第二个按钮为空
+        }
+
+        public override void OnChatButtonClicked(bool firstButton, ref string shop)
+        {
+            if (firstButton)
+            {
+                shop = "VertinShop";
+            }
+        }
+
+        public override void AddShops()
+        {
+            var npcShop = new NPCShop(Type, "VertinShop")
+                .Add<Items.AsymmetricRadionuclideRBlockItem>()
+                .Add<Items.AsymmetricRadionuclideRWallItem>()
+                .Add<Items.AsymmetricRadionuclideRPlatformItem>()
+                .Add<Items.AsymmetricRadionuclideRWorkbenchItem>();
+
+            npcShop.Register();
+        }
+
+        public override string GetChat()
+        {
+            // 检查玩家是否解锁了模组
+            Player player = Main.LocalPlayer;
+            Terra1999Player modPlayer = player.GetModPlayer<Terra1999Player>();
+
+            if (!modPlayer.modUnlocked)
+            {
+                return "此处似乎不需要我。";
+            }
+
+            int partyGirl = NPC.FindFirstNPC(NPCID.PartyGirl);
+            if (partyGirl >= 0 && Main.rand.NextBool(4))
+            {
+                return "拉普拉斯研究中心已经证实这些非对称核素R材料可以避免暴雨的侵蚀。";
+            }
+
+            switch (Main.rand.Next(4))
+            {
+                case 0:
+                    return "我之前从没来过如此奇特的地方...下次可以叫上其他成员。";
+                case 1:
+                    return "看起来这里要解决的麻烦也不少。";
+                case 2:
+                    return "这把平衡伞原本被设计用来避免暴雨侵蚀...但它在这里反倒多了些别的用途？";
+                default:
+                    return "因为暴雨的出现，我已经失去不少同伴了...希望你不会成为它的下一个牺牲品。";
+            }
+        }
+
+        public override void TownNPCAttackStrength(ref int damage, ref float knockback)
+        {
+            damage = 20;
+            knockback = 4f;
+        }
+
+        public override void TownNPCAttackCooldown(ref int cooldown, ref int randExtraCooldown)
+        {
+            cooldown = 30;
+            randExtraCooldown = 30;
+        }
+
+        public override void TownNPCAttackProj(ref int projType, ref int attackDelay)
+        {
+            projType = ProjectileID.Electrosphere;
+            attackDelay = 1;
+        }
+
+        public override void TownNPCAttackProjSpeed(ref float multiplier, ref float gravityCorrection, ref float randomOffset)
+        {
+            multiplier = 12f;
+            randomOffset = 2f;
+        }
+    }
+}
